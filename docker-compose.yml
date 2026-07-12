@@ -11,15 +11,8 @@ services:
     command: celery -A app.celery_app worker --loglevel=info --concurrency=2
     environment:
       - REDIS_URL=redis://redis:6379/0
-      # No browser is installed in the container, so disable the
-      # COOKIES_FROM_BROWSER default (it would try to read Chrome's
-      # cookie DB and fail). Instagram/TikTok work without cookies;
-      # for Facebook/gated content, mount a cookies.txt instead:
-      #   - COOKIES_FILE=/cookies.txt
-      - COOKIES_FROM_BROWSER=
     volumes:
       - ./downloads:/srv/downloads
-      # - ./cookies.txt:/cookies.txt:ro
     depends_on:
       - redis
 

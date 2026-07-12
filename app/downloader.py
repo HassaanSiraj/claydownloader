@@ -9,9 +9,6 @@ import yt_dlp
 
 log = logging.getLogger("downloader")
 
-# Default browser to pull cookies from when COOKIES_FROM_BROWSER is unset.
-DEFAULT_BROWSER = "chrome"
-
 # Hosts we advertise as supported. yt-dlp handles far more, but we gate the UI
 # to keep expectations honest for the MVP.
 SUPPORTED_HOSTS = (
@@ -34,31 +31,6 @@ def is_supported(url: str) -> bool:
     return any(host in url for host in SUPPORTED_HOSTS)
 
 
-def _apply_cookies(opts: dict) -> None:
-    """Attach cookies so age/bot-gated sites work.
-
-    Two ways, controlled by env vars:
-      COOKIES_FROM_BROWSER=chrome|safari|firefox|edge|brave  -> read live
-          cookies straight from that browser's profile (best for local use).
-      COOKIES_FILE=/path/to/cookies.txt                      -> Netscape-format
-          cookie file (best for servers, where no browser is installed).
-    """
-    cookie_file = os.environ.get("COOKIES_FILE")
-    browser = os.environ.get("COOKIES_FROM_BROWSER", DEFAULT_BROWSER)
-
-    # A cookies.txt file is the most robust option (no Keychain, fork-safe),
-    # so prefer it when provided.
-    if cookie_file and os.path.exists(cookie_file):
-        opts["cookiefile"] = cookie_file
-        log.warning("cookies: using file %s", cookie_file)
-    elif browser:
-        # yt-dlp expects a tuple: (browser_name, profile, keyring, container)
-        opts["cookiesfrombrowser"] = (browser.strip().lower(),)
-        log.warning("cookies: using browser %s", browser)
-    else:
-        log.warning("cookies: NONE")
-
-
 def download(url: str, out_dir: str, progress_hook=None) -> DownloadResult:
     """Download the best-quality video+audio to out_dir and return the file path.
 
@@ -78,7 +50,6 @@ def download(url: str, out_dir: str, progress_hook=None) -> DownloadResult:
         "no_warnings": True,
         "restrictfilenames": True,
     }
-    _apply_cookies(opts)
     if progress_hook:
         opts["progress_hooks"] = [progress_hook]
 

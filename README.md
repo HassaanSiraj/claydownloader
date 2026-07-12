@@ -89,32 +89,7 @@ It needs, in the GitHub repo's **Settings → Secrets and variables → Actions*
 - Variable `RAILWAY_SERVICE_ID` — the service's ID (Service → Settings → the
   ID in the URL, or `railway status` from the CLI).
 
-## Cookies (optional, helps Instagram/Facebook with gated content)
-
-Instagram and TikTok generally work without cookies. Facebook and
-age/login-gated Instagram content may need them. Two options, both read by
-`app/downloader.py`:
-
-**Option A — read cookies live from your browser (best for local use):**
-
-```bash
-export COOKIES_FROM_BROWSER=chrome   # or: safari | firefox | edge | brave
-```
-
-Set this on the **Celery worker** (that's the process that runs yt-dlp).
-On macOS, Chrome works well; Safari's cookie file is sandboxed and needs the
-terminal to have **Full Disk Access** in System Settings → Privacy.
-Not applicable in Docker — no browser is installed in the container, so
-`COOKIES_FROM_BROWSER` is left unset there.
-
-**Option B — a cookies.txt file (best for servers, no browser installed):**
-
-Export cookies in Netscape format (e.g. the "Get cookies.txt" browser
-extension) and point to it:
-
-```bash
-export COOKIES_FILE=/path/to/cookies.txt
-```
+## Notes
 
 - **Keep yt-dlp updated** — platforms change constantly: `pip install -U yt-dlp`.
 - **Scaling** — run more workers (`--concurrency` or more `celery worker`
