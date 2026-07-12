@@ -33,17 +33,32 @@ def is_supported(url: str) -> bool:
     return any(host in url for host in SUPPORTED_HOSTS)
 
 
-def _video_codec(filepath: str) -> str | None:
+def _probe(filepath: str) -> dict:
     try:
         out = subprocess.run(
             ["ffprobe", "-v", "error", "-select_streams", "v:0",
-             "-show_entries", "stream=codec_name", "-of", "json", filepath],
+             "-show_entries", "stream=codec_name,width,height", "-of", "json", filepath],
             capture_output=True, text=True, check=True,
         )
-        return json.loads(out.stdout)["streams"][0]["codec_name"]
+        return json.loads(out.stdout)["streams"][0]
     except Exception:
         log.warning("ffprobe failed on %s", filepath, exc_info=True)
+        return {}
+
+
+def _capped_dimensions(width: int, height: int, max_side: int = 1280) -> tuple[int, int] | None:
+    """Scale-down target that caps whichever side (width or height) is
+    larger — a plain width cap does nothing for portrait video, which is
+    the common case for reels/shorts. Returns None if already small enough.
+    """
+    long_side = max(width, height)
+    if long_side <= max_side:
         return None
+    scale = max_side / long_side
+    # even dimensions: required by yuv420p, the default libx264 pixel format
+    new_w = max(2, int(width * scale / 2) * 2)
+    new_h = max(2, int(height * scale / 2) * 2)
+    return new_w, new_h
 
 
 def _ensure_compatible(filepath: str) -> None:
@@ -51,17 +66,32 @@ def _ensure_compatible(filepath: str) -> None:
     which some platforms serve with no H.264 alternative) isn't the
     H.264/AAC combo that WhatsApp and most mobile/native players expect.
     """
-    if _video_codec(filepath) == "h264":
+    info = _probe(filepath)
+    if info.get("codec_name") == "h264":
         return
     log.warning("transcoding %s to H.264 for player compatibility", filepath)
     fixed = filepath + ".fixed.mp4"
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", filepath,
-         "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-         "-c:a", "aac", "-b:a", "128k",
-         "-movflags", "+faststart", fixed],
-        check=True, capture_output=True,
-    )
+    cmd = ["ffmpeg", "-y", "-i", filepath]
+    # Cap resolution and threads so the encode fits in a small container's
+    # memory budget instead of getting OOM-killed.
+    dims = _capped_dimensions(info.get("width") or 0, info.get("height") or 0)
+    if dims:
+        cmd += ["-vf", f"scale={dims[0]}:{dims[1]}"]
+    cmd += [
+        "-threads", "2",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+        "-movflags", "+faststart", fixed,
+    ]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+    except (subprocess.CalledProcessError, OSError):
+        # Better to hand back a file that plays in *some* players than to
+        # fail the whole download over a resource-constrained transcode.
+        log.warning("transcode failed, keeping original file %s", filepath, exc_info=True)
+        if os.path.exists(fixed):
+            os.remove(fixed)
+        return
     os.replace(fixed, filepath)
 
 

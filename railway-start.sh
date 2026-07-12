@@ -23,7 +23,10 @@ until python3 -c "import redis; redis.Redis(host='127.0.0.1', port=6379).ping()"
 done
 echo "redis ready"
 
-celery -A app.celery_app worker --loglevel=info --concurrency=2 &
+# concurrency=1: this container's whole memory budget is shared with Redis
+# and Uvicorn, and an H.264 transcode can spike memory — two at once risks
+# an OOM kill more than the sequential wait is worth here.
+celery -A app.celery_app worker --loglevel=info --concurrency=1 &
 WORKER_PID=$!
 
 uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" &
