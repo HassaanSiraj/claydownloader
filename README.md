@@ -81,7 +81,7 @@ the Dockerfile's default `CMD`.
    you want in-progress downloads to survive a restart/redeploy. Not required
    — files already auto-delete 15 minutes after download.
 
-**CI (GitHub Actions → auto-deploy on push to `main`):** see
+**CI (GitHub Actions → auto-deploy on push to `master`):** see
 [`.github/workflows/deploy-railway.yml`](.github/workflows/deploy-railway.yml).
 It needs, in the GitHub repo's **Settings → Secrets and variables → Actions**:
 

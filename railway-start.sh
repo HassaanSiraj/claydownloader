@@ -11,7 +11,17 @@ export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379/0}"
 redis-server --save "" --appendonly no --bind 127.0.0.1 &
 REDIS_PID=$!
 
-until redis-cli ping >/dev/null 2>&1; do sleep 0.3; done
+echo "waiting for redis..."
+tries=0
+until python3 -c "import redis; redis.Redis(host='127.0.0.1', port=6379).ping()" 2>/dev/null; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 100 ]; then
+    echo "redis never became ready, exiting" >&2
+    exit 1
+  fi
+  sleep 0.3
+done
+echo "redis ready"
 
 celery -A app.celery_app worker --loglevel=info --concurrency=2 &
 WORKER_PID=$!
