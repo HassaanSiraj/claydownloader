@@ -1,0 +1,9 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+# yt-dlp: keep on the bleeding edge — YouTube breaks it constantly.
+# Reinstall with:  pip install -U --pre "yt-dlp[default]"
+yt-dlp
+python-multipart==0.0.20
+celery==5.4.0
+redis==5.2.1
+certifi

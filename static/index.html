@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clay Downloader</title>
+  <style>
+    :root {
+      --bg: #dfe6f5;
+      --clay: #eef1fb;
+      --accent: #8b7cf6;      /* soft violet */
+      --accent-2: #6d5ef0;
+      --green: #5fd0a4;
+      --text: #4a4a68;
+      --muted: #9aa0c0;
+      --shadow-dark: rgba(150,160,210,0.55);
+      --shadow-light: #ffffff;
+      --radius: 34px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", "Quicksand", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(145deg, #e6ebfa 0%, #d8def2 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.25rem;
+    }
+
+    /* The core claymorphism recipe: soft outer drop + two inner shadows
+       (dark bottom-right, light top-left) to fake a puffy molded surface. */
+    .clay {
+      background: var(--clay);
+      border-radius: var(--radius);
+      box-shadow:
+        16px 16px 34px var(--shadow-dark),
+        -10px -10px 28px var(--shadow-light),
+        inset -6px -6px 14px var(--shadow-dark),
+        inset 8px 8px 16px var(--shadow-light);
+    }
+    .clay-inset {
+      background: var(--clay);
+      border-radius: 22px;
+      box-shadow:
+        inset 7px 7px 14px var(--shadow-dark),
+        inset -7px -7px 14px var(--shadow-light);
+    }
+
+    .card { width: 100%; max-width: 460px; padding: 2.5rem 2rem; }
+
+    .logo {
+      width: 74px; height: 74px; margin: 0 auto 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; border-radius: 26px;
+      background: linear-gradient(145deg, #9a8cff, #6d5ef0);
+      color: #fff;
+      box-shadow:
+        10px 10px 22px var(--shadow-dark),
+        -8px -8px 20px var(--shadow-light),
+        inset -4px -4px 8px rgba(80,60,200,0.5),
+        inset 5px 5px 10px rgba(255,255,255,0.5);
+    }
+
+    h1 { text-align: center; font-size: 1.6rem; font-weight: 800; letter-spacing: -.5px; }
+    p.sub { text-align: center; color: var(--muted); font-size: .95rem; margin: .35rem 0 1.8rem; font-weight: 600; }
+
+    .field { margin-bottom: 1.1rem; }
+    input {
+      width: 100%; border: none; outline: none;
+      padding: 1rem 1.25rem; font-size: 1rem; font-weight: 600;
+      background: transparent; color: var(--text);
+      border-radius: 22px;
+    }
+    input::placeholder { color: var(--muted); font-weight: 600; }
+
+    button {
+      width: 100%; border: none; cursor: pointer;
+      padding: 1.05rem; font-size: 1.05rem; font-weight: 800;
+      color: #fff; border-radius: 24px;
+      background: linear-gradient(145deg, var(--accent), var(--accent-2));
+      box-shadow:
+        10px 10px 24px var(--shadow-dark),
+        -8px -8px 20px var(--shadow-light),
+        inset -4px -4px 9px rgba(80,60,200,0.45),
+        inset 5px 5px 11px rgba(255,255,255,0.45);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    button:active:not(:disabled) {
+      transform: scale(.97);
+      box-shadow:
+        inset 6px 6px 14px rgba(80,60,200,0.5),
+        inset -5px -5px 12px rgba(255,255,255,0.4);
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .status { margin-top: 1.5rem; }
+    .status-inner { padding: 1.1rem 1.25rem; font-weight: 700; font-size: .95rem; }
+
+    .bar { height: 14px; border-radius: 99px; margin-top: .8rem; overflow: hidden;
+      box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light); }
+    .bar > div {
+      height: 100%; width: 0; border-radius: 99px;
+      background: linear-gradient(145deg, #9a8cff, #6d5ef0);
+      transition: width .35s ease;
+      box-shadow: inset -2px -2px 5px rgba(80,60,200,0.4), inset 2px 2px 5px rgba(255,255,255,0.5);
+    }
+
+    .row { display: flex; align-items: center; gap: .6rem; }
+    .spinner {
+      width: 20px; height: 20px; border-radius: 50%; flex: none;
+      border: 4px solid rgba(150,160,210,.35); border-top-color: var(--accent-2);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error { color: #e06a8b; }
+    .title { color: var(--text); word-break: break-word; }
+
+    a.dl {
+      display: block; text-align: center; margin-top: 1rem; text-decoration: none;
+      padding: 1rem; font-weight: 800; color: #fff; border-radius: 24px;
+      background: linear-gradient(145deg, #6fe0b4, #46bd8c);
+      box-shadow:
+        10px 10px 24px var(--shadow-dark),
+        -8px -8px 20px var(--shadow-light),
+        inset -4px -4px 9px rgba(40,150,110,0.45),
+        inset 5px 5px 11px rgba(255,255,255,0.5);
+      transition: transform .12s ease;
+    }
+    a.dl:active { transform: scale(.97); }
+
+    .chips { display: flex; gap: .5rem; justify-content: center; margin-top: 1.4rem; flex-wrap: wrap; }
+    .chip {
+      font-size: .72rem; font-weight: 800; color: var(--muted);
+      padding: .45rem .8rem; border-radius: 14px; letter-spacing: .3px;
+      box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="card clay">
+    <div class="logo">🎬</div>
+    <h1>Clay Downloader</h1>
+    <p class="sub">Paste a link. We'll mold it into a file.</p>
+
+    <div class="field clay-inset">
+      <input id="url" type="text" placeholder="https://..." autocomplete="off" spellcheck="false" />
+    </div>
+    <button id="go">Download</button>
+
+    <div class="status" id="status"></div>
+
+    <div class="chips">
+      <span class="chip">INSTAGRAM</span>
+      <span class="chip">TIKTOK</span>
+      <span class="chip">FACEBOOK</span>
+    </div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById("url");
+    const goBtn = document.getElementById("go");
+    const statusEl = document.getElementById("status");
+    let poll = null;
+
+    goBtn.addEventListener("click", start);
+    urlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });
+
+    async function start() {
+      const url = urlInput.value.trim();
+      if (!url) return;
+      if (poll) clearInterval(poll);
+      goBtn.disabled = true;
+      render(`<div class="status-inner clay-inset"><div class="row"><span class="spinner"></span> Starting…</div></div>`);
+
+      try {
+        const res = await fetch("/api/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Request failed");
+        pollStatus(data.job_id);
+      } catch (err) {
+        showError(err.message);
+        goBtn.disabled = false;
+      }
+    }
+
+    function pollStatus(jobId) {
+      poll = setInterval(async () => {
+        const res = await fetch(`/api/status/${jobId}`);
+        const job = await res.json();
+
+        if (job.status === "queued" || job.status === "downloading") {
+          const label = job.status === "queued" ? "Queued…" : `Downloading… ${job.progress}%`;
+          render(`<div class="status-inner clay-inset">
+              <div class="row"><span class="spinner"></span> ${label}</div>
+              <div class="bar"><div style="width:${job.progress}%"></div></div>
+            </div>`);
+        } else if (job.status === "done") {
+          clearInterval(poll);
+          goBtn.disabled = false;
+          render(`<div class="status-inner clay-inset">
+              <div class="title">✅ ${escapeHtml(job.title || "Ready")}</div>
+            </div>
+            <a class="dl" href="${job.download_url}">⬇ Save video</a>`);
+        } else if (job.status === "error") {
+          clearInterval(poll);
+          goBtn.disabled = false;
+          showError(job.error || "Download failed");
+        }
+      }, 1000);
+    }
+
+    function render(html) { statusEl.innerHTML = html; }
+    function showError(msg) {
+      render(`<div class="status-inner clay-inset error">❌ ${escapeHtml(msg)}</div>`);
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+  </script>
+</body>
+</html>
